@@ -9,6 +9,8 @@ import android.support.v13.app.FragmentStatePagerAdapter;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
+import android.util.SparseArray;
+import android.view.ViewGroup;
 import android.view.Window;
 
 public class MainActivity extends FragmentActivity implements ActionBar.TabListener, TestDialogFragment.TestDialogListener {
@@ -16,7 +18,7 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
     private SectionsPagerAdapter mSectionsPagerAdapter;
     private ViewPager mViewPager;
 
-    TestFragment testFragment;
+//    TestFragment testFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,11 +28,12 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 
         mSectionsPagerAdapter = new SectionsPagerAdapter(getFragmentManager());
 
+
         mViewPager = (ViewPager)findViewById(R.id.activity_main);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
-        // set up the fragment
-        testFragment = TestFragment.newInstance();
+        // fragment setup now handled in SectionsPagerAdapter
+//        testFragment = TestFragment.newInstance();
 
         final ActionBar actionBar = getActionBar();
         if (actionBar != null) {
@@ -80,7 +83,10 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
     public void onUpdateText(final String text) {
         // at this point, testFragment will not be null, but it won't be attached to an activity if orientation changed!!
         try {
-            testFragment.setLabelText(text);
+            Fragment f = mSectionsPagerAdapter.getRegisteredFragment(0);
+            if (f != null && f instanceof TestFragment) {
+                ((TestFragment)f).setLabelText(text);
+            }
         } catch (Exception e) {
             Log.e("TEST", "caught exception", e);
         }
@@ -88,15 +94,37 @@ public class MainActivity extends FragmentActivity implements ActionBar.TabListe
 
     public class SectionsPagerAdapter extends FragmentStatePagerAdapter {
 
+        private SparseArray<Fragment> registeredFragments = new SparseArray<>();
+
         public SectionsPagerAdapter(FragmentManager fm) {
             super(fm);
+        }
+
+        // Register the fragment when the item is instantiated
+        @Override
+        public Object instantiateItem(ViewGroup container, int position) {
+            Fragment fragment = (Fragment) super.instantiateItem(container, position);
+            registeredFragments.put(position, fragment);
+            return fragment;
+        }
+
+        // Unregister when the item is inactive
+        @Override
+        public void destroyItem(ViewGroup container, int position, Object object) {
+            registeredFragments.remove(position);
+            super.destroyItem(container, position, object);
+        }
+
+        // Returns the fragment for the position (if instantiated)
+        public Fragment getRegisteredFragment(int position) {
+            return registeredFragments.get(position);
         }
 
         @Override
         public Fragment getItem(int position) {
             switch (position) {
                 case 0:
-                    return testFragment;
+                    return TestFragment.newInstance();
             }
             return null;
         }
